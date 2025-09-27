@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-music"></i> My Concerts</h1>
+    <div>
+        <a href="{{ url_for('add_concert') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add Concert
+        </a>
+        <a href="{{ url_for('import_ticketmaster') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-ticket-alt"></i> Import from Ticketmaster
+        </a>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="filter-section">
+    <form method="GET" class="row g-3">
+        <div class="col-md-4">
+            <label for="date_filter" class="form-label">Filter by Date/Year</label>
+            <input type="text" class="form-control" id="date_filter" name="date_filter" 
+                   value="{{ date_filter }}" placeholder="e.g., 2024, 2024-03">
+        </div>
+        <div class="col-md-4">
+            <label for="sort" class="form-label">Sort by</label>
+            <select class="form-select" id="sort" name="sort">
+                <option value="date_desc" {{ 'selected' if sort_by == 'date_desc' }}>Date (Newest First)</option>
+                <option value="date_asc" {{ 'selected' if sort_by == 'date_asc' }}>Date (Oldest First)</option>
+                <option value="rating_desc" {{ 'selected' if sort_by == 'rating_desc' }}>Rating (Highest First)</option>
+                <option value="rating_asc" {{ 'selected' if sort_by == 'rating_asc' }}>Rating (Lowest First)</option>
+            </select>
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+            <button type="submit" class="btn btn-outline-primary me-2">Apply Filters</button>
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Clear</a>
+        </div>
+    </form>
+</div>
+
+{% if concerts %}
+    <div class="row">
+        {% for concert in concerts %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100">
+                {% if concert[9] %}
+                    <img src="{{ url_for('static', filename='photos/' + concert[9]) }}" 
+                         class="card-img-top concert-photo" alt="Concert photo">
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ concert[1] }}</h5>
+                    <p class="card-text">
+                        <strong><i class="fas fa-map-marker-alt"></i> Venue:</strong> {{ concert[2] }}<br>
+                        <strong><i class="fas fa-calendar"></i> Date:</strong> {{ concert[3] }}<br>
+                    </p>
+                    
+                    {% if concert[7] %}
+                        <div class="mb-2">
+                            <strong>Overall Rating:</strong><br>
+                            <span data-rating="{{ concert[7] }}"></span>
+                        </div>
+                        <div class="small text-muted">
+                            Musician: <span data-rating="{{ concert[4] }}"></span><br>
+                            Crowd: <span data-rating="{{ concert[5] }}"></span><br>
+                            Venue: <span data-rating="{{ concert[6] }}"></span>
+                        </div>
+                    {% else %}
+                        <div class="mb-2">
+                            <span class="badge bg-secondary">
+                                <i class="fas fa-clock"></i> Unrated
+                            </span>
+                        </div>
+                        <p class="text-muted small">Click edit to add ratings</p>
+                    {% endif %}
+                    
+                    {% if concert[8] %}
+                        <p class="card-text mt-2"><small>{{ concert[8] }}</small></p>
+                    {% endif %}
+                </div>
+                <div class="card-footer">
+                    <a href="{{ url_for('edit_concert', concert_id=concert[0]) }}" 
+                       class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-edit"></i> Edit
+                    </a>
+                    <a href="{{ url_for('delete_concert', concert_id=concert[0]) }}" 
+                       class="btn btn-sm btn-outline-danger"
+                       onclick="return confirm('Are you sure you want to delete this concert?')">
+                        <i class="fas fa-trash"></i> Delete
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-music fa-3x text-muted mb-3"></i>
+        <h3 class="text-muted">No concerts yet!</h3>
+        <p class="text-muted">Start tracking your concert experiences.</p>
+        <a href="{{ url_for('add_concert') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add Your First Concert
+        </a>
+    </div>
+{% endif %}
+{% endblock %}

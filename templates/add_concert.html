@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <h2><i class="fas fa-plus"></i> Add New Concert</h2>
+        
+        <form method="POST" enctype="multipart/form-data" class="mt-4">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="artist" class="form-label">Artist/Band *</label>
+                        <input type="text" class="form-control" id="artist" name="artist" required>
+                        <div id="artist-suggestions" class="list-group position-absolute" style="z-index: 1000; display: none;"></div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="venue" class="form-label">Venue *</label>
+                        <input type="text" class="form-control" id="venue" name="venue" required>
+                        <div id="venue-suggestions" class="list-group position-absolute" style="z-index: 1000; display: none;"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="date" class="form-label">Date *</label>
+                <input type="date" class="form-control" id="date" name="date" required>
+            </div>
+            
+            <h4>Ratings <small class="text-muted">(Optional - can be added later)</small></h4>
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="add_ratings">
+                <label class="form-check-label" for="add_ratings">
+                    Add ratings now (leave unchecked to rate later)
+                </label>
+            </div>
+            
+            <div id="rating-section" style="display: none;">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="musician_rating" class="form-label">Musician/Performance Rating</label>
+                            <input type="range" class="form-range rating-slider" id="musician_rating" 
+                                   name="musician_rating" min="1" max="5" step="0.5" value="3">
+                            <div class="d-flex justify-content-between">
+                                <small>1</small>
+                                <span id="musician_value">3</span>
+                                <small>5</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="crowd_rating" class="form-label">Crowd Rating</label>
+                            <input type="range" class="form-range rating-slider" id="crowd_rating" 
+                                   name="crowd_rating" min="1" max="5" step="0.5" value="3">
+                            <div class="d-flex justify-content-between">
+                                <small>1</small>
+                                <span id="crowd_value">3</span>
+                                <small>5</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="venue_rating" class="form-label">Venue Rating</label>
+                            <input type="range" class="form-range rating-slider" id="venue_rating" 
+                                   name="venue_rating" min="1" max="5" step="0.5" value="3">
+                            <div class="d-flex justify-content-between">
+                                <small>1</small>
+                                <span id="venue_value">3</span>
+                                <small>5</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="overall_preview" class="form-label">Overall Rating Preview</label>
+                    <div id="overall_preview" class="alert alert-info">
+                        <span data-rating="3.0"></span>
+                    </div>
+                    <small class="text-muted">Formula: (Musician × 0.8) + (Crowd × 0.1) + (Venue × 0.1)</small>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="photo" class="form-label">Photo</label>
+                <input type="file" class="form-control" id="photo" name="photo" accept="image/*">
+            </div>
+            
+            <div class="mb-3">
+                <label for="notes" class="form-label">Notes</label>
+                <textarea class="form-control" id="notes" name="notes" rows="3" 
+                          placeholder="Any additional thoughts about the concert..."></textarea>
+            </div>
+            
+            <div class="mb-3">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Add Concert
+                </button>
+                <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Toggle rating section
+document.getElementById('add_ratings').addEventListener('change', function() {
+    const ratingSection = document.getElementById('rating-section');
+    const ratingInputs = ratingSection.querySelectorAll('input[type="range"]');
+    
+    if (this.checked) {
+        ratingSection.style.display = 'block';
+    } else {
+        ratingSection.style.display = 'none';
+        // Clear rating values when hidden
+        ratingInputs.forEach(input => input.value = '');
+    }
+});
+
+// Rating sliders
+document.getElementById('musician_rating').addEventListener('input', function() {
+    document.getElementById('musician_value').textContent = this.value;
+    updateOverallRating();
+});
+
+document.getElementById('crowd_rating').addEventListener('input', function() {
+    document.getElementById('crowd_value').textContent = this.value;
+    updateOverallRating();
+});
+
+document.getElementById('venue_rating').addEventListener('input', function() {
+    document.getElementById('venue_value').textContent = this.value;
+    updateOverallRating();
+});
+
+function updateOverallRating() {
+    const addRatings = document.getElementById('add_ratings').checked;
+    if (!addRatings) return;
+    
+    const musician = parseFloat(document.getElementById('musician_rating').value);
+    const crowd = parseFloat(document.getElementById('crowd_rating').value);
+    const venue = parseFloat(document.getElementById('venue_rating').value);
+    
+    const overall = (musician * 0.8 + crowd * 0.1 + venue * 0.1).toFixed(2);
+    
+    const previewElement = document.querySelector('#overall_preview [data-rating]');
+    previewElement.dataset.rating = overall;
+    previewElement.innerHTML = renderStars(parseFloat(overall));
+}
+
+// Artist suggestions
+let artistTimeout;
+document.getElementById('artist').addEventListener('input', function() {
+    clearTimeout(artistTimeout);
+    const query = this.value;
+    
+    if (query.length < 2) {
+        document.getElementById('artist-suggestions').style.display = 'none';
+        return;
+    }
+    
+    artistTimeout = setTimeout(() => {
+        fetch(`/api/spotify_artists?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(artists => {
+                const suggestionsDiv = document.getElementById('artist-suggestions');
+                suggestionsDiv.innerHTML = '';
+                
+                if (artists.length > 0) {
+                    artists.forEach(artist => {
+                        const div = document.createElement('div');
+                        div.className = 'list-group-item list-group-item-action';
+                        div.textContent = artist.name;
+                        div.addEventListener('click', () => {
+                            document.getElementById('artist').value = artist.name;
+                            suggestionsDiv.style.display = 'none';
+                        });
+                        suggestionsDiv.appendChild(div);
+                    });
+                    suggestionsDiv.style.display = 'block';
+                } else {
+                    suggestionsDiv.style.display = 'none';
+                }
+            })
+            .catch(err => console.error('Error fetching artists:', err));
+    }, 300);
+});
+
+// Venue suggestions
+let venueTimeout;
+document.getElementById('venue').addEventListener('input', function() {
+    clearTimeout(venueTimeout);
+    const query = this.value;
+    
+    if (query.length < 2) {
+        document.getElementById('venue-suggestions').style.display = 'none';
+        return;
+    }
+    
+    venueTimeout = setTimeout(() => {
+        fetch(`/api/google_venues?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(venues => {
+                const suggestionsDiv = document.getElementById('venue-suggestions');
+                suggestionsDiv.innerHTML = '';
+                
+                if (venues.length > 0) {
+                    venues.forEach(venue => {
+                        const div = document.createElement('div');
+                        div.className = 'list-group-item list-group-item-action';
+                        div.textContent = venue.name;
+                        div.addEventListener('click', () => {
+                            document.getElementById('venue').value = venue.name;
+                            suggestionsDiv.style.display = 'none';
+                        });
+                        suggestionsDiv.appendChild(div);
+                    });
+                    suggestionsDiv.style.display = 'block';
+                } else {
+                    suggestionsDiv.style.display = 'none';
+                }
+            })
+            .catch(err => console.error('Error fetching venues:', err));
+    }, 300);
+});
+
+// Hide suggestions when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('#artist, #artist-suggestions')) {
+        document.getElementById('artist-suggestions').style.display = 'none';
+    }
+    if (!e.target.closest('#venue, #venue-suggestions')) {
+        document.getElementById('venue-suggestions').style.display = 'none';
+    }
+});
+
+// Initialize overall rating
+updateOverallRating();
+</script>
+{% endblock %}
